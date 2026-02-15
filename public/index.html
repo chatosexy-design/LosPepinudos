@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chato'Sano - El Sabor de la Salud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'vibrant-green': '#39FF14',
+                        'deep-green': '#00A86B',
+                        'soft-green': '#F0FFF0',
+                        'mustache-brown': '#3E2723',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Lobster&display=swap');
+        body { font-family: 'Poppins', sans-serif; }
+        .brand-font { font-family: 'Lobster', cursive; }
+        .bg-gradient-green { background: linear-gradient(135deg, var(--vibrant-green, #39FF14) 0%, #00A86B 100%); }
+        .glass { background: rgba(255, 255, 255, 0.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+        
+        /* Logo Styles */
+        .logo-container { display: flex; flex-direction: column; align-items: center; }
+        .chef-hat { position: relative; width: 40px; height: 30px; background: white; border-radius: 50% 50% 5px 5px; border: 2px solid #333; margin-bottom: -5px; z-index: 2; }
+        .chef-hat::before { content: ''; position: absolute; bottom: -5px; left: 5px; width: 26px; height: 10px; background: white; border: 2px solid #333; border-radius: 3px; }
+        .mustache { position: relative; width: 60px; height: 15px; margin-top: 5px; }
+        .mustache::before, .mustache::after { content: ''; position: absolute; width: 30px; height: 20px; border-bottom: 8px solid #3E2723; border-radius: 0 0 100% 100%; top: -10px; }
+        .mustache::before { left: 0; border-left: 8px solid #3E2723; transform: rotate(-15deg); }
+        .mustache::after { right: 0; border-right: 8px solid #3E2723; transform: rotate(15deg); }
+    </style>
+</head>
+<body class="bg-soft-green min-h-screen">
+
+    <!-- Auth View -->
+    <div id="auth-view" class="flex items-center justify-center min-h-screen p-4">
+        <div class="glass relative p-8 rounded-3xl shadow-2xl w-full max-w-md border-t-4 border-vibrant-green overflow-hidden">
+            <div class="text-center mb-8">
+                <div class="logo-container mb-4">
+                    <div class="chef-hat"></div>
+                    <h1 class="text-4xl brand-font text-gray-800">Chato'Sano</h1>
+                    <div class="mustache"></div>
+                </div>
+                <p class="text-gray-600 mt-2 italic">"Donde lo rico se vuelve sano"</p>
+            </div>
+            
+            <div id="login-form">
+                <input type="text" id="login-username" placeholder="Usuario" class="w-full p-4 mb-4 rounded-xl border-2 border-gray-100 focus:border-vibrant-green outline-none transition-all">
+                <input type="password" id="login-password" onkeydown="if(event.key === 'Enter') login()" placeholder="Contraseña" class="w-full p-4 mb-6 rounded-xl border-2 border-gray-100 focus:border-vibrant-green outline-none transition-all">
+                <button onclick="login()" class="w-full bg-gradient-green text-white font-bold py-4 rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all">Entrar</button>
+                <p class="text-center mt-6 text-gray-600">¿No tienes cuenta? <a href="#" onclick="toggleAuth()" class="text-deep-green font-semibold">Regístrate</a></p>
+            </div>
+
+            <div id="register-form" class="hidden">
+                <input type="text" id="reg-username" placeholder="Nuevo Usuario" class="w-full p-4 mb-4 rounded-xl border-2 border-gray-100 focus:border-vibrant-green outline-none transition-all">
+                <input type="password" id="reg-password" onkeydown="if(event.key === 'Enter') register()" placeholder="Contraseña" class="w-full p-4 mb-6 rounded-xl border-2 border-gray-100 focus:border-vibrant-green outline-none transition-all">
+                <button onclick="register()" class="w-full bg-gradient-green text-white font-bold py-4 rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all">Crear Cuenta</button>
+                <p class="text-center mt-6 text-gray-600">¿Ya tienes cuenta? <a href="#" onclick="toggleAuth()" class="text-deep-green font-semibold">Inicia Sesión</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="main-view" class="hidden">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-sm sticky top-0 z-50">
+            <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="flex flex-col items-center scale-75 origin-left">
+                        <div class="chef-hat !w-6 !h-4 !border"></div>
+                        <span class="brand-font text-2xl -mt-1">Chato'Sano</span>
+                        <div class="mustache !w-8 !h-2 !mt-0"></div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <span id="user-streak-display" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-bold">
+                        <i class="fas fa-fire mr-1"></i> <span id="streak-count">0</span> días
+                    </span>
+                    <button onclick="toggleSettings()" class="text-gray-500 hover:text-deep-green transition-colors">
+                        <i class="fas fa-cog text-xl"></i>
+                    </button>
+                    <button onclick="logout()" class="text-gray-500 hover:text-red-500 transition-colors">
+                        <i class="fas fa-sign-out-alt text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="toggleSettings()"></div>
+            <div class="glass relative p-8 rounded-3xl shadow-2xl w-full max-w-lg border-t-4 border-vibrant-green">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-user-cog text-vibrant-green mr-3"></i> Ajustes y Personalización
+                </h2>
+                
+                <div class="space-y-6">
+                    <!-- Theme Color -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Color Principal del Tema</label>
+                        <div class="flex gap-4">
+                            <button onclick="setTheme('#39FF14')" class="w-10 h-10 rounded-full bg-[#39FF14] border-4 border-white shadow-md hover:scale-110 transition-transform"></button>
+                            <button onclick="setTheme('#00D1FF')" class="w-10 h-10 rounded-full bg-[#00D1FF] border-4 border-white shadow-md hover:scale-110 transition-transform"></button>
+                            <button onclick="setTheme('#FF1493')" class="w-10 h-10 rounded-full bg-[#FF1493] border-4 border-white shadow-md hover:scale-110 transition-transform"></button>
+                            <button onclick="setTheme('#FFA500')" class="w-10 h-10 rounded-full bg-[#FFA500] border-4 border-white shadow-md hover:scale-110 transition-transform"></button>
+                            <button onclick="setTheme('#9B51E0')" class="w-10 h-10 rounded-full bg-[#9B51E0] border-4 border-white shadow-md hover:scale-110 transition-transform"></button>
+                        </div>
+                    </div>
+
+                    <!-- Dark Mode Toggle -->
+                    <div class="flex items-center justify-between py-4 border-t border-b">
+                        <div>
+                            <span class="block font-semibold text-gray-800">Modo Oscuro</span>
+                            <span class="text-xs text-gray-500">Próximamente disponible</span>
+                        </div>
+                        <div class="w-12 h-6 bg-gray-200 rounded-full relative opacity-50 cursor-not-allowed">
+                            <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                        </div>
+                    </div>
+
+                    <!-- Account Info -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tu Cuenta</label>
+                        <div class="bg-soft-green p-4 rounded-xl flex items-center justify-between">
+                            <span id="settings-username" class="font-bold text-deep-green">Usuario</span>
+                            <button class="text-xs text-deep-green font-bold hover:underline">Cambiar Contraseña</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="toggleSettings()" class="w-full mt-8 bg-gray-800 text-white font-bold py-3 rounded-xl hover:bg-black transition-all">
+                    Cerrar y Guardar
+                </button>
+            </div>
+        </div>
+
+        <main class="max-w-6xl mx-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <!-- Column 1: Search & Calories -->
+            <div class="md:col-span-2 space-y-8">
+                <!-- Search Section -->
+                <section class="bg-white p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-search text-vibrant-green mr-3"></i> Buscador de Calorías
+                    </h2>
+                    <div class="relative mb-6">
+                        <input type="text" id="food-search" oninput="searchFood()" placeholder="¿Qué comiste hoy? (ej. Manzana, Pollo...)" 
+                            class="w-full p-4 pl-12 rounded-2xl bg-soft-green border-2 border-transparent focus:border-vibrant-green outline-none transition-all text-lg">
+                        <i class="fas fa-utensils absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <div id="search-results" class="grid grid-cols-1 gap-3">
+                        <!-- Search results will appear here -->
+                    </div>
+                    
+                    <!-- Meal Builder Entry -->
+                    <div class="mt-6 p-6 bg-vibrant-green/10 rounded-3xl border-2 border-vibrant-green border-dashed flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800">¿Vas a preparar algo especial?</h3>
+                            <p class="text-sm text-gray-500">Crea tu torta, taco o ensalada ingrediente por ingrediente.</p>
+                        </div>
+                        <button onclick="toggleMealBuilder()" class="bg-vibrant-green hover:bg-deep-green text-white px-6 py-3 rounded-2xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-vibrant-green/20">
+                            <i class="fas fa-hammer mr-2"></i> Construir mi Plato
+                        </button>
+                    </div>
+                    
+                    <!-- Manual Entry Button -->
+                    <div class="mt-6 text-center">
+                        <button onclick="toggleManualEntry()" class="text-deep-green font-semibold hover:underline">
+                            <i class="fas fa-plus-circle mr-1"></i> ¿No encuentras tu comida? Agrégala manualmente
+                        </button>
+                    </div>
+
+                    <!-- Manual Entry Form -->
+                    <div id="manual-entry-form" class="hidden mt-6 p-6 bg-soft-green rounded-2xl border-2 border-dashed border-vibrant-green">
+                        <h3 class="font-bold text-gray-800 mb-4">Agregar comida personalizada</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="manual-name" placeholder="Nombre del alimento" class="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-vibrant-green">
+                            <input type="number" id="manual-calories" placeholder="Calorías (kcal)" class="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-vibrant-green">
+                        </div>
+                        <button onclick="addManualFood()" class="w-full mt-4 bg-deep-green text-white font-bold py-3 rounded-xl hover:bg-vibrant-green transition-all">
+                            Guardar y Añadir
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Daily Log -->
+                <section class="bg-white p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-calendar-day text-vibrant-green mr-3"></i> Registro de Hoy
+                    </h2>
+                    <div id="daily-log-list" class="space-y-4">
+                        <!-- Daily food items -->
+                    </div>
+                    <div class="mt-8 pt-6 border-t flex justify-between items-center">
+                        <span class="text-gray-600 font-semibold text-lg">Total Calorías:</span>
+                        <span id="total-calories" class="text-3xl font-bold text-deep-green">0 kcal</span>
+                    </div>
+                </section>
+
+                <!-- Stats / Patterns -->
+                <section class="bg-white p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-chart-line text-vibrant-green mr-3"></i> Patrones y Estadísticas
+                    </h2>
+                    <div id="stats-container" class="h-40 flex items-end space-x-2">
+                        <!-- Bars will appear here -->
+                    </div>
+                    <div class="mt-4 text-center text-sm text-gray-500">Calorías consumidas los últimos 7 días</div>
+                </section>
+            </div>
+
+            <!-- Column 2: Habits, Journal & Assistant -->
+            <div class="space-y-8">
+                <!-- Micro-habits -->
+                <section class="bg-white p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-check-circle text-vibrant-green mr-2"></i> Micro-hábitos
+                    </h2>
+                    <div id="habits-list" class="space-y-3">
+                        <!-- Habits -->
+                    </div>
+                    <div class="mt-4 flex gap-2">
+                        <input type="text" id="new-habit" placeholder="Nuevo hábito..." class="flex-1 p-2 bg-soft-green rounded-lg outline-none text-sm">
+                        <button onclick="addHabit()" class="bg-vibrant-green text-white p-2 rounded-lg hover:bg-deep-green transition-colors">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Healthy Assistant -->
+                <section class="bg-gradient-green p-6 rounded-3xl shadow-lg text-white">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-robot mr-2"></i> Asistente Saludable
+                    </h2>
+                    <div id="assistant-msg" class="bg-white/20 p-4 rounded-2xl text-sm italic mb-4">
+                        "¡Hola! No olvides beber al menos 2 litros de agua hoy para mantener tu energía alta."
+                    </div>
+                    <button onclick="getAdvice()" class="w-full bg-white text-deep-green font-bold py-2 rounded-xl text-sm hover:shadow-md transition-all">
+                        Dame un consejo
+                    </button>
+                </section>
+
+                <!-- Journal -->
+                <section class="bg-white p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-book text-vibrant-green mr-2"></i> Diario de Bienestar
+                    </h2>
+                    <textarea id="journal-entry" placeholder="¿Cómo te sientes hoy?" class="w-full p-4 bg-soft-green rounded-2xl outline-none h-24 text-sm mb-4 resize-none"></textarea>
+                    <div class="flex justify-between items-center">
+                        <select id="journal-mood" class="bg-soft-green p-2 rounded-lg text-sm outline-none">
+                            <option value="😊">Feliz 😊</option>
+                            <option value="😐">Normal 😐</option>
+                            <option value="😴">Cansado 😴</option>
+                            <option value="😔">Triste 😔</option>
+                        </select>
+                        <button onclick="saveJournal()" class="bg-deep-green text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-vibrant-green transition-colors">
+                            Guardar
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Reminders (Mock logic) -->
+                <section class="bg-orange-50 p-6 rounded-3xl border-2 border-orange-100">
+                    <h2 class="text-xl font-bold text-orange-800 mb-2 flex items-center">
+                        <i class="fas fa-bell mr-2"></i> Recordatorio
+                    </h2>
+                    <p class="text-orange-600 text-sm">Próxima comida recomendada: <strong>14:00 (Almuerzo)</strong></p>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+
+    <!-- Meal Builder Modal -->
+    <div id="meal-builder-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="bg-vibrant-green p-6 text-white flex justify-between items-center">
+                <div class="flex items-center">
+                    <i class="fas fa-utensils mr-3 text-2xl"></i>
+                    <div>
+                        <h3 class="text-xl font-bold">Constructor de Platos</h3>
+                        <p class="text-xs opacity-80 italic">"Hazlo a tu gusto"</p>
+                    </div>
+                </div>
+                <button onclick="toggleMealBuilder()" class="text-white hover:rotate-90 transition-transform text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">¿Cómo se llama tu creación?</label>
+                    <input type="text" id="custom-meal-name" placeholder="Ej: Mi Súper Torta con Todo" class="w-full p-3 rounded-xl border-2 border-gray-100 focus:border-vibrant-green outline-none transition-all">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Añadir Ingredientes</label>
+                    <div class="relative">
+                        <input type="text" id="ing-search" oninput="searchIngredients()" placeholder="Busca aguacate, jamón, mayonesa..." class="w-full p-3 pl-10 rounded-xl border-2 border-gray-100 focus:border-vibrant-green outline-none transition-all">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <div id="ing-results" class="mt-2 max-h-32 overflow-y-auto space-y-1 bg-gray-50 rounded-xl p-1 empty:hidden"></div>
+                </div>
+
+                <div class="bg-soft-green rounded-2xl p-4 mb-4">
+                    <h4 class="text-xs font-bold text-deep-green uppercase tracking-wider mb-3 flex justify-between">
+                        <span>Ingredientes Añadidos</span>
+                        <span id="ing-count" class="bg-white px-2 py-0.5 rounded text-gray-500">0</span>
+                    </h4>
+                    <div id="custom-meal-list" class="space-y-2 max-h-48 overflow-y-auto">
+                        <p id="empty-meal-msg" class="text-sm text-gray-400 text-center py-4 italic">Aún no has añadido nada. ¡Empieza a construir!</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                    <div>
+                        <span class="text-xs text-gray-500 block uppercase font-bold tracking-tighter">Total del Plato</span>
+                        <span id="custom-meal-total" class="text-3xl font-black text-deep-green">0 <span class="text-sm font-normal">kcal</span></span>
+                    </div>
+                    <button onclick="saveCustomMeal()" class="bg-vibrant-green hover:bg-deep-green text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-vibrant-green/20 transition-all transform hover:scale-105 active:scale-95">
+                        Añadir al Diario
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
