@@ -1,4 +1,11 @@
-const API_URL = localStorage.getItem('API_URL') || 'http://localhost:3000/api';
+let API_URL = localStorage.getItem('API_URL');
+if (!API_URL) {
+    if (window.location.hostname === 'localhost') {
+        API_URL = 'http://localhost:3000/api';
+    } else {
+        API_URL = '/api';
+    }
+}
 let token = localStorage.getItem('token');
 let currentUser = JSON.parse(localStorage.getItem('user'));
 
