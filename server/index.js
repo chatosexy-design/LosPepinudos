@@ -42,6 +42,58 @@ const authenticate = (req, res, next) => {
   });
 };
 
+function computeTDEE(profile) {
+  const sex = (profile.sex || 'M').toUpperCase();
+  const w = Number(profile.weight_kg || 60);
+  const h = Number(profile.height_cm || 165);
+  const a = Number(profile.age || 17);
+  let bmr = sex === 'F' ? 10 * w + 6.25 * h - 5 * a - 161 : 10 * w + 6.25 * h - 5 * a + 5;
+  let factor = 1.4;
+  const act = (profile.activity || 'moderada').toLowerCase();
+  if (act.includes('ligera')) factor = 1.375;
+  else if (act.includes('moder')) factor = 1.55;
+  else if (act.includes('intensa')) factor = 1.725;
+  let tdee = Math.round(bmr * factor);
+  const goal = (profile.goal || 'mantener').toLowerCase();
+  if (goal.includes('bajar')) tdee -= 250;
+  if (goal.includes('subir')) tdee += 250;
+  if (tdee < 1200) tdee = 1200;
+  return tdee;
+}
+
+function pick(items, target) {
+  const result = [];
+  let sum = 0;
+  for (const it of items) {
+    if (sum + it.calories <= target) {
+      result.push(it);
+      sum += it.calories;
+    }
+    if (sum >= target * 0.9) break;
+  }
+  return { list: result, total: sum };
+}
+
+function generatePlanFor(calTarget, rows) {
+  const healthyPrefs = ['Avena','Yogurt Griego','Manzana','Plátano','Pechuga de Pollo','Arroz Blanco','Ensalada Mixta','Brócoli','Lentejas','Quinoa','Espinacas','Salmón','Aguacate','Pasta'];
+  const healthy = rows.filter(r => healthyPrefs.some(p => r.name.includes(p)));
+  const byCalories = arr => [...arr].sort((a,b)=>a.calories-b.calories);
+  const bTarget = Math.round(calTarget * 0.25);
+  const lTarget = Math.round(calTarget * 0.4);
+  const dTarget = Math.round(calTarget * 0.25);
+  const sTarget = Math.round(calTarget * 0.1);
+  const breakfast = pick(byCalories(healthy), bTarget);
+  const lunch = pick(byCalories([...healthy].reverse()), lTarget);
+  const dinner = pick(byCalories(healthy), dTarget);
+  const snacks = pick(byCalories(rows.filter(r => r.name.includes('Manzana') || r.name.includes('Yogurt') || r.name.includes('Plátano'))), sTarget);
+  return [
+    ...breakfast.list.map(i => ({ meal_type: 'Desayuno', item_name: i.name, calories: i.calories })),
+    ...lunch.list.map(i => ({ meal_type: 'Almuerzo', item_name: i.name, calories: i.calories })),
+    ...dinner.list.map(i => ({ meal_type: 'Cena', item_name: i.name, calories: i.calories })),
+    ...snacks.list.map(i => ({ meal_type: 'Snack', item_name: i.name, calories: i.calories })),
+  ];
+}
+
 // --- AUTH ROUTES ---
 app.post('/api/register', (req, res) => {
   const { username, password } = req.body;
@@ -60,6 +112,60 @@ app.post('/api/login', (req, res) => {
     }
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: '24h' });
     res.json({ token, user: { id: user.id, username: user.username, streak: user.streak } });
+  });
+});
+
+app.get('/api/profile', authenticate, (req, res) => {
+  if (req.userId === 0) {
+    return res.json({ full_name: 'Invitado', age: 17, sex: 'M', height_cm: 170, weight_kg: 65, activity: 'moderada', goal: 'mantener', allergies: '' });
+  }
+  db.get(`SELECT full_name, age, sex, height_cm, weight_kg, activity, goal, allergies FROM users WHERE id = ?`, [req.userId], (err, row) => {
+    if (!row) return res.json({ full_name: '', age: null, sex: '', height_cm: null, weight_kg: null, activity: '', goal: '', allergies: '' });
+    res.json(row);
+  });
+});
+
+app.put('/api/profile', authenticate, (req, res) => {
+  const { full_name, age, sex, height_cm, weight_kg, activity, goal, allergies } = req.body;
+  if (req.userId === 0) return res.json({ success: true });
+  db.run(`UPDATE users SET full_name = ?, age = ?, sex = ?, height_cm = ?, weight_kg = ?, activity = ?, goal = ?, allergies = ? WHERE id = ?`,
+    [full_name || null, age || null, sex || null, height_cm || null, weight_kg || null, activity || null, goal || null, allergies || null, req.userId],
+    function(err){ res.json({ success: true }); });
+});
+
+app.get('/api/meal-plan', authenticate, (req, res) => {
+  const date = new Date().toISOString().split('T')[0];
+  db.all(`SELECT * FROM meal_plans WHERE user_id = ? AND date = ?`, [req.userId, date], (err, rows) => {
+    if (rows && rows.length > 0) return res.json(rows);
+    const uid = req.userId;
+    const getProfile = cb => {
+      if (uid === 0) return cb({ sex:'M', weight_kg:65, height_cm:170, age:17, activity:'moderada', goal:'mantener' });
+      db.get(`SELECT sex, weight_kg, height_cm, age, activity, goal FROM users WHERE id = ?`, [uid], (e, r)=> cb(r || {}));
+    };
+    getProfile(profile => {
+      const target = computeTDEE(profile);
+      db.all(`SELECT name, calories FROM calorie_db`, (e, foodRows) => {
+        const plan = generatePlanFor(target, foodRows || []);
+        const stmt = db.prepare(`INSERT INTO meal_plans (user_id, date, meal_type, item_name, calories, eaten) VALUES (?, ?, ?, ?, ?, 0)`);
+        plan.forEach(p => stmt.run(uid, date, p.meal_type, p.item_name, p.calories));
+        stmt.finalize(() => {
+          db.all(`SELECT * FROM meal_plans WHERE user_id = ? AND date = ?`, [uid, date], (e2, rows2) => res.json(rows2 || []));
+        });
+      });
+    });
+  });
+});
+
+app.post('/api/meal-plan/:id/eat', authenticate, (req, res) => {
+  const id = req.params.id;
+  const date = new Date().toISOString().split('T')[0];
+  db.get(`SELECT * FROM meal_plans WHERE id = ? AND user_id = ?`, [id, req.userId], (err, row) => {
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    db.run(`UPDATE meal_plans SET eaten = 1 WHERE id = ?`, [id], () => {
+      db.run(`INSERT INTO food_logs (user_id, food_name, calories, date) VALUES (?, ?, ?, ?)`, [req.userId, row.item_name, row.calories, date], () => {
+        res.json({ success: true });
+      });
+    });
   });
 });
 

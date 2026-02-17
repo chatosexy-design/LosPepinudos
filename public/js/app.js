@@ -78,6 +78,8 @@ function showDashboard() {
     loadDailyLogs();
     loadHabits();
     loadStats();
+    loadProfile();
+    loadMealPlan();
 }
 
 function toggleSettings() {
@@ -203,6 +205,103 @@ async function saveCustomMeal() {
     toggleMealBuilder();
     
     // Show a small success toast/notification logic could go here
+}
+
+async function loadProfile() {
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const res = await fetch(`${API_URL}/profile`, { headers });
+    const p = await res.json();
+    if (p) {
+        const nombre = document.getElementById('prof-nombre');
+        if (nombre) nombre.value = p.full_name || '';
+        const edad = document.getElementById('prof-edad');
+        if (edad) edad.value = p.age || '';
+        const sexo = document.getElementById('prof-sexo');
+        if (sexo) sexo.value = p.sex || '';
+        const act = document.getElementById('prof-actividad');
+        if (act) act.value = p.activity || '';
+        const alt = document.getElementById('prof-altura');
+        if (alt) alt.value = p.height_cm || '';
+        const pes = document.getElementById('prof-peso');
+        if (pes) pes.value = p.weight_kg || '';
+        const obj = document.getElementById('prof-objetivo');
+        if (obj) obj.value = p.goal || '';
+        const ale = document.getElementById('prof-alergias');
+        if (ale) ale.value = p.allergies || '';
+    }
+}
+
+async function saveProfile() {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const body = {
+        full_name: document.getElementById('prof-nombre').value,
+        age: parseInt(document.getElementById('prof-edad').value) || null,
+        sex: document.getElementById('prof-sexo').value || null,
+        height_cm: parseFloat(document.getElementById('prof-altura').value) || null,
+        weight_kg: parseFloat(document.getElementById('prof-peso').value) || null,
+        activity: document.getElementById('prof-actividad').value || null,
+        goal: document.getElementById('prof-objetivo').value || null,
+        allergies: document.getElementById('prof-alergias').value || null
+    };
+    await fetch(`${API_URL}/profile`, { method: 'PUT', headers, body: JSON.stringify(body) });
+    loadMealPlan();
+}
+
+async function loadMealPlan() {
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const res = await fetch(`${API_URL}/meal-plan`, { headers });
+    const plan = await res.json();
+    const container = document.getElementById('plan-container');
+    if (!container) return;
+    let consumed = 0;
+    const targetText = document.getElementById('plan-target');
+    const consumedText = document.getElementById('plan-consumed');
+    const bar = document.getElementById('plan-progress');
+    const byType = { 'Desayuno': [], 'Almuerzo': [], 'Cena': [], 'Snack': [] };
+    plan.forEach(p => {
+        if (byType[p.meal_type]) byType[p.meal_type].push(p);
+        if (p.eaten) consumed += p.calories;
+    });
+    const targetGuess = plan.reduce((s,p)=>s+p.calories,0);
+    if (targetText) targetText.textContent = `${targetGuess} kcal`;
+    if (consumedText) consumedText.textContent = `${consumed} kcal`;
+    if (bar) {
+        const pct = Math.min(100, Math.round((consumed/Math.max(1,targetGuess))*100));
+        bar.style.width = pct + '%';
+    }
+    const typesOrder = ['Desayuno','Almuerzo','Cena','Snack'];
+    container.innerHTML = typesOrder.map(t => {
+        const items = byType[t] || [];
+        if (items.length === 0) return '';
+        const kcal = items.reduce((s,i)=>s+i.calories,0);
+        const rows = items.map(i => `
+            <div class="flex justify-between items-center bg-white/70 text-gray-800 p-2 rounded-xl">
+                <span class="text-sm">${i.item_name}</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold">${i.calories} kcal</span>
+                    ${i.eaten ? '<span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Comido</span>' : `<button onclick="eatPlannedItem(${i.id})" class="bg-white text-deep-green px-2 py-1 rounded-lg text-xs font-bold hover:bg-soft-green">Comer</button>`}
+                </div>
+            </div>
+        `).join('');
+        return `
+            <div class="bg-white/20 rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold">${t}</h3>
+                    <span class="text-sm">${kcal} kcal</span>
+                </div>
+                <div class="space-y-2">${rows}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function eatPlannedItem(id) {
+    const headers = token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+    await fetch(`${API_URL}/meal-plan/${id}/eat`, { method: 'POST', headers });
+    loadMealPlan();
+    loadDailyLogs();
+    loadStats();
 }
 
 // Stats & Graphs
